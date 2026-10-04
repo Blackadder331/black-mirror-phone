@@ -985,7 +985,7 @@
     animation: none;
   }
   .slide .w {
-    display: inline; /* inline, not inline-block: so a full stop can never be wrapped away from its word */
+    display: inline-block; /* the fade-in blur needs a box (Safari leaves inline words stuck blurred) */
   }
   .slide.on .w {
     animation: wordIn 0.9s ease-out var(--dl, 0s) both;
@@ -5461,6 +5461,17 @@ Their question: ${q}`;
               } else walk(n);
             });
           walk(el);
+          // a full stop or comma straight after a highlighted phrase must never wrap onto its own line:
+          // tie the phrase and the punctuation together
+          for (const w of [...el.querySelectorAll(".w")]) {
+            const prev = w.previousSibling;
+            if (/^[.,;:!?…’”)]/.test(w.textContent) && prev && prev.nodeType === 1 && !prev.classList.contains("w")) {
+              const glue = document.createElement("span");
+              glue.style.whiteSpace = "nowrap";
+              prev.replaceWith(glue);
+              glue.append(prev, w);
+            }
+          }
           el.dataset.split = "1";
         }
         const words = el.querySelectorAll(".w");
