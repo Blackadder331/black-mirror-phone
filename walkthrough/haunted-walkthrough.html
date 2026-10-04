@@ -5523,17 +5523,34 @@ Their question: ${q}`;
   showStep(0);
   // Start the sound (score + room tone) on the first click, tap or key press in the intro;
   // browsers don't allow audio before that.
+  // Phones (iOS Safari especially) only let sound start inside a finished tap ("touchend" or "click"),
+  // not on the finger going down, so keep trying on every kind of gesture until the audio is really running.
+  const GESTURES = ["pointerdown", "touchend", "click", "keydown"];
   const firstGesture = () => {
-    removeEventListener("pointerdown", firstGesture, true);
-    removeEventListener("keydown", firstGesture, true);
     try {
       initAudio();
+      const ctx = listener?.context;
+      if (ctx) {
+        if (ctx.state !== "running") ctx.resume?.();
+        // the classic unlock: play one silent sample from inside the gesture
+        const b = ctx.createBuffer(1, 1, 22050),
+          src = ctx.createBufferSource();
+        src.buffer = b;
+        src.connect(ctx.destination);
+        src.start(0);
+        if (ctx.state === "running")
+          for (const g of GESTURES) removeEventListener(g, firstGesture, true);
+        else
+          ctx.onstatechange = () => {
+            if (ctx.state === "running")
+              for (const g of GESTURES) removeEventListener(g, firstGesture, true);
+          };
+      }
     } catch (e) {
       console.warn(e);
     }
   };
-  addEventListener("pointerdown", firstGesture, true);
-  addEventListener("keydown", firstGesture, true);
+  for (const g of GESTURES) addEventListener(g, firstGesture, { capture: true, passive: true });
   $("#start .card.intro").classList.add("ready");
 
   $("#enter").addEventListener("click", () => {
