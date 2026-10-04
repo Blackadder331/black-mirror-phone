@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operator</title>
+<style>
+  :root { --bg: #0e0d0c; --card: #1a1816; --line: #2c2925; --ink: #ece6dc; --dim: #9a9187;
+          --accent: #d9b56b; --bad: #e0675a; --good: #7fbf8a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4 system-ui, sans-serif; padding: 16px; max-width: 560px; margin-inline: auto; }
+  h1 { font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); margin: 0 0 12px; font-weight: 600; }
+  .state { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .state b { display: block; font-size: 26px; text-transform: capitalize; }
+  .state small { color: var(--dim); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+  .chip { border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 13px; color: var(--dim); }
+  .chip.on { color: var(--ink); border-color: var(--accent); }
+  .chip.bad { color: var(--bad); border-color: var(--bad); }
+  .alert { display: none; background: #3a1714; border: 1px solid var(--bad); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+  .alert button { margin-top: 8px; }
+  .fate { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+  .fate em { font-family: Georgia, serif; font-size: 18px; }
+  .fate small { display: block; color: var(--dim); margin-top: 4px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  button { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 14px 10px; font: inherit; font-weight: 600; }
+  button:active { background: var(--line); }
+  button.primary { border-color: var(--accent); color: var(--accent); }
+  button.danger { border-color: var(--bad); color: var(--bad); }
+  h2 { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin: 18px 0 8px; font-weight: 600; }
+</style>
+</head>
+<body>
+<h1>Haunted room · operator</h1>
+
+<div class="alert" id="alert"><b>Check on the guest.</b> <span id="alertMsg"></span><br>
+  <button onclick="cmd('clear_alert')">Clear alert</button></div>
+
+<div class="state"><b id="state">connecting…</b><small id="since"></small></div>
+<div class="chips" id="chips"></div>
+
+<div class="fate" id="fateBox" style="display:none"><em id="fate"></em><small id="fateMeta"></small></div>
+
+<h2>Show</h2>
+<div class="grid">
+  <button class="primary" onclick="cmd('start')">Start show now</button>
+  <button class="danger" onclick="cmd('reset')">Reset</button>
+  <button id="pauseBtn" onclick="cmd(paused ? 'resume' : 'pause')">Pause</button>
+  <button id="muteBtn" onclick="cmd(muted ? 'unmute' : 'mute')">Mute</button>
+</div>
+
+<h2>Tests (between guests)</h2>
+<div class="grid">
+  <button onclick="cmd('ring_test')">Ring bells</button>
+  <button onclick="cmd('text_test')">Test text</button>
+  <button onclick="cmd('figure_test')">Test figure</button>
+  <button onclick="cmd('black')">Mirror black</button>
+</div>
+
+<script>
+const token = new URLSearchParams(location.search).get("token") || "";
+const q = token ? "?token=" + encodeURIComponent(token) : "";
+let paused = false, muted = false;
+
+async function cmd(action) {
+  await fetch("/api/cmd" + q, { method: "POST", headers: { "Content-Type": "application/json" },
+                               body: JSON.stringify({ action }) });
+  refresh();
+}
+
+function ago(t) { const s = Math.max(0, Math.round(Date.now() / 1000 - t)); return s < 60 ? s + "s" : Math.floor(s / 60) + "m " + (s % 60) + "s"; }
+function chip(label, on, bad) { return `<span class="chip ${bad ? "bad" : on ? "on" : ""}">${label}</span>`; }
+
+async function refresh() {
+  try {
+    const s = await (await fetch("/api/status" + q)).json();
+    paused = s.paused; muted = s.muted;
+    document.getElementById("state").textContent = s.state;
+    document.getElementById("since").textContent = "for " + ago(s.since) + " · shows tonight: " + s.shows_run;
+    document.getElementById("chips").innerHTML =
+      chip(s.hook_up ? "Handset lifted" : "Handset down", s.hook_up) +
+      chip(s.occupied ? "Room occupied" : "Room empty", s.occupied) +
+      chip(s.present ? "Sensor: someone" : "Sensor: nobody", s.present) +
+      chip("Hardware: " + s.hardware, false, s.hardware !== "ok" && s.hardware !== "simulation") +
+      chip(s.mirror_pages ? "Mirror connected" : "Mirror NOT connected", s.mirror_pages > 0, !s.mirror_pages) +
+      (s.paused ? chip("Paused", true, true) : "") + (s.muted ? chip("Muted", true, true) : "");
+    document.getElementById("pauseBtn").textContent = s.paused ? "Resume" : "Pause";
+    document.getElementById("muteBtn").textContent = s.muted ? "Unmute" : "Mute";
+    const a = document.getElementById("alert");
+    a.style.display = s.alert ? "block" : "none";
+    if (s.alert) document.getElementById("alertMsg").textContent = s.alert.message;
+    if (s.last && s.last.fate) {
+      document.getElementById("fateBox").style.display = "block";
+      document.getElementById("fate").textContent = "“" + s.last.fate + "”";
+      document.getElementById("fateMeta").textContent = s.last.source + " · " + ago(s.last.at) + " ago" +
+        (s.last.question ? " · asked: " + s.last.question : "");
+    }
+  } catch (e) {
+    document.getElementById("state").textContent = "controller offline";
+  }
+}
+refresh();
+setInterval(refresh, 1000);
+</script>
+</body>
+</html>

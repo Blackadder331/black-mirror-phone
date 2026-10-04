@@ -1,0 +1,85 @@
+# ───────────────────────────────────────────────────────────────
+#  The Haunted Phone & Mirror — show configuration
+#  Tune the scare here; you should never need to edit the code.
+# ───────────────────────────────────────────────────────────────
+
+# sim  = no hardware: keyboard fakes the phone + sensor, lines are printed
+# real = Pico (hook, bells, sensor) + USB sound cards + Whisper
+mode: sim
+
+timings:                         # all in seconds
+  pause_before_ring_s: [8, 20]   # random range: the uncomfortable wait after they walk in
+  ring_give_up_s: 30             # stop ringing if nobody answers
+  pickup_silence_s: 1.5          # faint static before the voice speaks
+  name_listen_max_s: 5           # time window to say their name
+  reason_listen_max_s: 7         # time window to say why they came
+  question_listen_max_s: 10      # time window to ask the question
+  end_of_speech_silence_s: 1.2   # this much silence = they finished talking
+  filler_min_s: 3.0              # "thinking" always lasts at least this long
+  oracle_timeout_s: 8            # AI gets this long, then a prewritten fate is used
+  text_fade_in_s: 3
+  text_hold_s: 7
+  text_fade_out_s: 4
+  after_reveal_pause_s: 1.0      # beat of silence before "Goodbye now."
+  linger_before_figure_s: 8      # how long they may stay before the figure starts
+  figure_fade_in_s: 25           # slow: the realization is the scare
+  empty_room_confirm_s: 5        # sensor must read empty this long to count as empty
+  cooldown_after_reset_s: 10     # quiet time before the next guest can trigger it
+  offhook_nag_gap_s: 6           # gap between whispered "Put it back." loops
+
+hardware:
+  serial_port: auto              # auto finds the Pico; or e.g. /dev/ttyACM0, COM4
+  baud: 115200
+
+audio:
+  # Device names are matched by substring (see: python haunt.py --list-devices).
+  # Two identical USB adapters get identical names — buy two different models,
+  # or use the numeric device index instead of a name.
+  handset_device: "USB Audio"        # earpiece output
+  mic_device: ""                     # blank = same adapter as the handset
+  room_device: "USB PnP Sound"       # hidden room speaker output
+  handset_gain: 0.8
+  room_gain: 1.0
+  handset_peak_ceiling: 0.6          # hard ceiling on earpiece level — protects ears
+  vad: auto                          # auto | webrtc | energy
+  vad_aggressiveness: 2              # webrtc: 0 (lenient) … 3 (strict)
+  energy_threshold: 0.015            # energy VAD: set with --mic-test
+  audio_dir: audio
+
+# Every spoken line. `out` is where it plays; `text` is shown in sim mode and is
+# your script for the voice actor. Files live in audio/ (any sample rate, WAV).
+lines:
+  static: {file: static.wav, out: handset, text: "(faint crackle on the line)"}
+  L01:    {file: L01.wav, out: handset, text: "…Who is there? Tell me your name."}
+  L02:    {file: L02.wav, out: handset, text: "And why have you come?"}
+  L03:    {file: L03.wav, out: handset, text: "Ask me a question."}
+  L04:    {file: L04.wav, out: handset, text: "Speak. The living are so hard to hear."}
+  L05:    {file: L05.wav, out: handset, text: "(slow breathing) …Yes… I see it…"}
+  L06:    {file: L06.wav, out: handset, text: "Your fate is sealed. Stare into the mirror for the answer you seek."}
+  L07:    {file: L07.wav, out: room,    text: "Goodbye now."}
+  L08:    {file: L08.wav, out: handset, text: "(whisper) Put it back."}
+
+stt:
+  model: small.en                # base.en on a Raspberry Pi 5
+  device: cpu                    # cuda if the brain has an NVIDIA GPU
+  compute_type: int8
+
+oracle:
+  url: http://127.0.0.1:11434/api/generate
+  model: llama3.2:3b             # any instruct model you've pulled with `ollama pull`
+  temperature: 0.9
+  max_tokens: 40
+  min_words: 3
+  max_words: 14
+  name_prefix_chance: 0.33       # "Sarah. Not yet."
+  fates_file: fates.txt
+  blocklist_file: blocklist.txt
+  safe_line: "Some questions belong to the living. Go and ask them."
+
+web:
+  host: 0.0.0.0                  # operator panel reachable from your phone on local Wi-Fi
+  port: 8080
+  operator_token: ""             # set a word to require ?token=word on the panel
+
+privacy:
+  keep_transcripts: false        # true = log + show guests' words on the panel

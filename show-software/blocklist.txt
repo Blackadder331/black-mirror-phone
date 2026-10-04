@@ -1,0 +1,15 @@
+# Whole words the oracle may never show on the mirror. One per line, lowercase.
+# Add slurs, profanity and anything else that's off-limits for your audience.
+fuck
+shit
+bitch
+cunt
+dick
+pussy
+whore
+slut
+rape
+suicide
+kill yourself
+cancer
+overdose

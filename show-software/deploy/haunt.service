@@ -1,0 +1,24 @@
+# Starts the show controller at login and restarts it if it ever stops.
+# Runs as a *user* service so it can use the desktop's sound devices.
+#
+#   mkdir -p ~/.config/systemd/user
+#   cp deploy/haunt.service ~/.config/systemd/user/
+#   (edit the paths below to where you put haunted-room)
+#   systemctl --user enable --now haunt
+#   sudo loginctl enable-linger $USER          # keep running without a login
+#   sudo usermod -aG dialout,audio $USER       # serial + sound access, then log out/in
+#
+# Watch it:  journalctl --user -u haunt -f
+
+[Unit]
+Description=Haunted Phone & Mirror show controller
+After=default.target
+
+[Service]
+WorkingDirectory=%h/haunted-room
+ExecStart=/usr/bin/python3 %h/haunted-room/haunt.py --real
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

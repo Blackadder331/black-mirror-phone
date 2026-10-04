@@ -1,0 +1,33 @@
+# The Other Line: show-software/ (the real room) + walkthrough/ (the web version), one repo
+
+# macOS
+.DS_Store
+._*
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# secrets and local settings (API keys, machine-specific config)
+.env
+.env.*
+*.local.yaml
+
+# logs and recordings the show writes while running
+*.log
+logs/
+recordings/
+*.wav.tmp
+
+# editors
+.vscode/
+.idea/
+*.swp
+
+# Node (if you ever add tooling)
+node_modules/

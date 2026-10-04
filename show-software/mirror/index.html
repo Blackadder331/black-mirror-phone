@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mirror</title>
+    <style>
+      /* ── Tune these on site ─────────────────────────────────────────── */
+      :root {
+        --ink: rgb(214, 207, 191); /* warm off-white; never pure white  */
+        --text-top: 40%; /* vertical position of the answer   */
+        --text-size: 7vh;
+        --text-width: 82vw;
+        --fig-left: 64%; /* figure: just behind the guest's    */
+        --fig-bottom: 0%; /*   shoulder in the reflection       */
+        --fig-height: 78vh;
+        --fig-peak: 1; /* extra dimmer for the figure, 0–1   */
+      }
+      @font-face {
+        font-family: "Oracle";
+        src: url("fonts/oracle.woff2") format("woff2");
+      }
+
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+        cursor: none;
+      }
+      #answer {
+        position: absolute;
+        left: 50%;
+        top: var(--text-top);
+        width: var(--text-width);
+        transform: translate(-50%, -50%);
+        text-align: center;
+        font-family:
+          "Oracle", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+        font-size: var(--text-size);
+        line-height: 1.25;
+        letter-spacing: 0.02em;
+        color: var(--ink);
+        text-shadow: 0 0 0.45em rgba(214, 207, 191, 0.22);
+        opacity: 1;
+      }
+      #answer .w {
+        display: inline-block;
+        opacity: 0;
+        filter: blur(12px);
+        transform: translateY(0.06em);
+        transition-property: opacity, filter, transform;
+        transition-timing-function: ease-in-out;
+      }
+      #answer .w.on {
+        opacity: 1;
+        filter: blur(0);
+        transform: none;
+      }
+
+      #figure {
+        position: absolute;
+        left: var(--fig-left);
+        bottom: var(--fig-bottom);
+        height: var(--fig-height);
+        transform: translateX(-50%);
+        opacity: 0;
+        transition-property: opacity;
+        transition-timing-function: linear;
+      }
+      #figure video,
+      #figure svg {
+        height: 100%;
+        display: block;
+        filter: brightness(var(--fig-peak));
+      }
+      #figure svg {
+        display: none;
+      }
+      #figure.placeholder video {
+        display: none;
+      }
+      #figure.placeholder svg {
+        display: block;
+      }
+
+      /* placeholder silhouette until you film the real figure */
+      .breathe {
+        animation: sway 9s ease-in-out infinite;
+        transform-origin: 50% 100%;
+      }
+      @keyframes sway {
+        50% {
+          transform: translateX(3px) scale(1.004);
+        }
+      }
+      .eye {
+        animation: blink 7.3s infinite;
+        transform-box: fill-box;
+        transform-origin: center;
+      }
+      @keyframes blink {
+        0%,
+        96%,
+        100% {
+          transform: scaleY(1);
+        }
+        97.5% {
+          transform: scaleY(0.05);
+        }
+      }
+
+      #debug {
+        position: fixed;
+        left: 8px;
+        bottom: 6px;
+        font: 12px monospace;
+        color: #555;
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="answer"></div>
+
+    <div id="figure">
+      <video src="figure.mp4" muted loop playsinline preload="auto"></video>
+      <!-- Placeholder: very dark gray head and shoulders, used if figure.mp4 is missing -->
+      <svg viewBox="0 0 300 420" aria-hidden="true">
+        <defs>
+          <radialGradient id="g" cx="50%" cy="35%" r="65%">
+            <stop offset="0" stop-color="rgb(22,22,22)" />
+            <stop offset="1" stop-color="rgb(0,0,0)" />
+          </radialGradient>
+        </defs>
+        <g class="breathe" fill="url(#g)">
+          <ellipse cx="150" cy="120" rx="58" ry="74" />
+          <path d="M40 420 C40 300 90 250 150 250 C210 250 260 300 260 420 Z" />
+          <rect x="128" y="185" width="44" height="80" rx="18" />
+          <ellipse
+            class="eye"
+            cx="128"
+            cy="118"
+            rx="7"
+            ry="3.2"
+            fill="rgb(26,26,26)"
+          />
+          <ellipse
+            class="eye"
+            cx="172"
+            cy="118"
+            rx="7"
+            ry="3.2"
+            fill="rgb(26,26,26)"
+          />
+        </g>
+      </svg>
+    </div>
+
+    <div id="debug">connecting…</div>
+
+    <script>
+      const answer = document.getElementById("answer");
+      const figure = document.getElementById("figure");
+      const video = figure.querySelector("video");
+      const debug = document.getElementById("debug");
+      const DEBUG = new URLSearchParams(location.search).has("debug");
+      if (DEBUG) debug.style.display = "block";
+
+      let timers = [];
+      let flicker = null;
+      const later = (fn, s) => timers.push(setTimeout(fn, s * 1000));
+      function clearTimers() {
+        timers.forEach(clearTimeout);
+        timers = [];
+        clearInterval(flicker);
+        flicker = null;
+      }
+
+      video.addEventListener("error", () =>
+        figure.classList.add("placeholder"),
+      );
+      video.addEventListener("loadeddata", () =>
+        figure.classList.remove("placeholder"),
+      );
+
+      /* The answer materializes word by word, flickers like a candle, then dissolves. */
+      function showText({ text, fade_in, hold, fade_out }) {
+        clearTimers();
+        answer.style.transition = "none";
+        answer.style.opacity = 1;
+        answer.style.filter = "none";
+        answer.innerHTML = "";
+        const words = text.split(/\s+/).map((w) => {
+          const s = document.createElement("span");
+          s.className = "w";
+          s.textContent = w;
+          answer.appendChild(s);
+          answer.appendChild(document.createTextNode(" "));
+          return s;
+        });
+        const each = Math.max(0.8, fade_in * 0.6);
+        const stagger =
+          words.length > 1
+            ? Math.max(0, fade_in - each) / (words.length - 1)
+            : 0;
+        void answer.offsetWidth; // commit the hidden state first
+        words.forEach((s, i) => {
+          s.style.transitionDuration = each + "s";
+          s.style.transitionDelay = i * stagger + "s";
+          s.classList.add("on");
+        });
+        later(() => {
+          // candle flicker while it hangs there
+          answer.style.transition = "opacity 0.25s";
+          flicker = setInterval(
+            () => {
+              answer.style.opacity = (0.88 + Math.random() * 0.12).toFixed(2);
+            },
+            140 + Math.random() * 260,
+          );
+        }, fade_in);
+        later(() => {
+          // dissolve
+          clearInterval(flicker);
+          answer.style.transition = `opacity ${fade_out}s ease-in, filter ${fade_out}s ease-in`;
+          answer.style.opacity = 0;
+          answer.style.filter = "blur(10px)";
+        }, fade_in + hold);
+        later(
+          () => {
+            answer.innerHTML = "";
+          },
+          fade_in + hold + fade_out + 0.2,
+        );
+      }
+
+      function figureIn({ fade }) {
+        figure.style.transition = "none";
+        figure.style.opacity = 0;
+        try {
+          video.currentTime = 0;
+          video.play().catch(() => {});
+        } catch (e) {}
+        void figure.offsetWidth;
+        figure.style.transition = `opacity ${fade}s linear`;
+        figure.style.opacity = 1;
+      }
+
+      function cut() {
+        // hard cut: more unsettling than a fade
+        figure.style.transition = "none";
+        figure.style.opacity = 0;
+        video.pause();
+      }
+
+      function black() {
+        clearTimers();
+        answer.innerHTML = "";
+        cut();
+      }
+
+      const handlers = { text: showText, figure_in: figureIn, cut, black };
+
+      function connect() {
+        const es = new EventSource("/events");
+        es.onopen = () => {
+          debug.textContent = "connected";
+        };
+        es.onerror = () => {
+          debug.textContent = "reconnecting…";
+        }; // EventSource retries by itself
+        es.onmessage = (e) => {
+          const msg = JSON.parse(e.data);
+          debug.textContent =
+            "last: " + msg.cmd + (msg.text ? " — " + msg.text : "");
+          (handlers[msg.cmd] || (() => {}))(msg);
+        };
+      }
+      connect();
+    </script>
+  </body>
+</html>

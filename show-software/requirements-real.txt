@@ -1,0 +1,8 @@
+# Real hardware (also needs the PortAudio system library: sudo apt install libportaudio2)
+pyyaml
+pyserial
+numpy
+sounddevice
+soundfile
+faster-whisper
+webrtcvad-wheels   # optional: better speech detection; falls back to an energy threshold

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Near-black calibration</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; cursor: none; font-family: monospace; }
+  main { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3vh; padding: 6vh 6vw; height: 88vh; box-sizing: border-box; }
+  .p { display: flex; align-items: flex-end; justify-content: center; border-radius: 6px; }
+  .p span { font-size: 1.6vh; color: rgb(70, 70, 70); padding-bottom: 0.6vh; }
+  p { color: rgb(60, 60, 60); text-align: center; font-size: 1.5vh; margin: 0; }
+</style>
+</head>
+<body>
+<main id="grid"></main>
+<p>Stand where a guest stands after ~2 minutes in the dark. Note the faintest patch you can just see.
+   Set the figure's brightest point to 1.5–2× that value. Patch 0 must be invisible.</p>
+<script>
+  const grid = document.getElementById("grid");
+  for (let v = 0; v <= 30; v += 2) {
+    const d = document.createElement("div");
+    d.className = "p";
+    d.style.background = `rgb(${v},${v},${v})`;
+    d.innerHTML = `<span>${v}</span>`;
+    grid.appendChild(d);
+  }
+</script>
+</body>
+</html>
