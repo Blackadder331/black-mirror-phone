@@ -1014,6 +1014,12 @@
   }
   /* phones (iPhone Safari and Chrome): animating a blur on dozens of words at once over the 3D view
      makes WebKit drop frames and leave words stuck half-faded. Fade them in with opacity alone. */
+  .slide.on .w.done,
+  .slide .w.done {
+    animation: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+  }
   @keyframes wordInSoft {
     from {
       opacity: 0;
@@ -5491,6 +5497,10 @@ Their question: ${q}`;
           el.dataset.split = "1";
         }
         const words = el.querySelectorAll(".w");
+        for (const w of words) {
+          w.classList.remove("done");
+          w.onanimationend = () => w.classList.add("done"); // finished: pin it sharp and visible
+        }
         words.forEach((w, i) =>
           w.style.setProperty("--dl", (t + i * WORD).toFixed(2) + "s"),
         );
