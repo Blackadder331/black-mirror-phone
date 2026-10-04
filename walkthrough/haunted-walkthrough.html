@@ -6304,6 +6304,7 @@ Their question: ${q}`;
     g.fillStyle = g.createPattern(tile, "repeat");
     g.translate(-ox, -oy);
     g.fillRect(0, 0, w + 256, h + 256);
+    g.setTransform(1, 0, 0, 1, 0, 0); // back to normal, so clearing later wipes the whole thing
   }
   {
     const c = $("#filmGrain");
@@ -6320,7 +6321,9 @@ Their question: ${q}`;
       music?.setPaused(!$("#pause").hidden);
       if (!screensUp()) {
         if (shown) {
-          c.getContext("2d").clearRect(0, 0, c.width, c.height);
+          const g = c.getContext("2d");
+          g.setTransform(1, 0, 0, 1, 0, 0);
+          g.clearRect(0, 0, c.width, c.height);
           shown = false;
         }
         return;
