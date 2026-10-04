@@ -1012,6 +1012,22 @@
       filter: none;
     }
   }
+  /* phones (iPhone Safari and Chrome): animating a blur on dozens of words at once over the 3D view
+     makes WebKit drop frames and leave words stuck half-faded. Fade them in with opacity alone. */
+  @keyframes wordInSoft {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @media (max-width: 900px), (pointer: coarse) {
+    .slide.on .w {
+      animation-name: wordInSoft;
+      will-change: opacity;
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
     .slide > *,
     .slide .w {
